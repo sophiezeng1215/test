@@ -1,3 +1,35 @@
+-- Tested
+SELECT cities.city_name, 
+       PERCENTILE_DISC(0.9) WITHIN GROUP (ORDER BY trips.actual_eta - trips.predicted_eta)
+       as percentile90
+  FROM trips LEFT OUTER JOIN cities ON trips.city_id = cities.city_id
+  WHERE cities.city_name IN ('Qarth', 'Meereen') 
+  AND trips.status = 'completed'
+  AND trips.request_at > CURRENT_TIMESTAMP -  INTERVAL '30 days'
+  GROUP BY cities.city_name;
+
+
+SELECT cities.city_name, 
+       EXTRACT (DOW from events._ts) AS day_of_week,    
+       (SUM (CASE WHEN events.rider_id IN 
+                  (SELECT DISTINCT trips.client_id FROM trips                
+                   INNER JOIN events
+                   ON trips.client_id = events.rider_id
+                   WHERE trips.status = 'completed' 
+                   AND trips.request_at < events._ts + INTERVAL '168 hours') 
+              THEN 1 ELSE 0 END)*100.0
+        / COUNT(*)) AS percentage
+FROM events 
+LEFT OUTER JOIN cities 
+ON events.city_id = cities.city_id
+WHERE events.event_name = 'sign_up_success'
+AND cities.city_name IN ('Qarth', 'Meereen')
+AND EXTRACT(YEAR FROM events._ts) = 2016
+AND EXTRACT(WEEK FROM events._ts) = 1
+GROUP BY cities.city_name, day_of_week;
+
+
+
 
 
 --q1
